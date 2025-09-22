@@ -2,8 +2,17 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { addToCartApi, getProductByIdApi } from "../services/api";
 import { toast } from "sonner";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { addToCart } from "../store/slices/cartSlice";
+import {
+  addToFavorites,
+  removeFromFavorites,
+  checkFavorite,
+} from "../store/slices/favoriteSlice";
+import ReviewForm from "../components/ReviewForm";
+import ReviewList from "../components/ReviewList";
+import { Rate, message } from "antd";
+import { HeartOutlined, HeartFilled } from "@ant-design/icons";
 
 const Product = () => {
   const dispatch = useDispatch();
@@ -15,6 +24,10 @@ const Product = () => {
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [selectedSize, setSelectedSize] = useState("S");
   const [quantity, setQuantity] = useState(1);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+
+  const { isAuthenticated } = useSelector((state) => state.auth);
+  const { favoriteStatus } = useSelector((state) => state.favorite);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -33,6 +46,12 @@ const Product = () => {
     };
     fetchData();
   }, [productId]);
+
+  useEffect(() => {
+    if (isAuthenticated && productId) {
+      dispatch(checkFavorite(productId));
+    }
+  }, [dispatch, isAuthenticated, productId]);
 
   const images = useMemo(() => {
     if (!product?.productImage) return [];
@@ -77,6 +96,28 @@ const Product = () => {
     });
   };
 
+  const handleToggleFavorite = async () => {
+    if (!isAuthenticated) {
+      message.warning("Vui lòng đăng nhập để thêm vào yêu thích");
+      return;
+    }
+
+    try {
+      const isFavorite = favoriteStatus[productId];
+      if (isFavorite) {
+        await dispatch(removeFromFavorites(productId)).unwrap();
+        message.success("Đã xóa khỏi danh sách yêu thích");
+        toast.success("Đã xóa khỏi danh sách yêu thích");
+      } else {
+        await dispatch(addToFavorites(productId)).unwrap();
+        message.success("Đã thêm vào danh sách yêu thích");
+        toast.success("Đã thêm vào danh sách yêu thích");
+      }
+    } catch (error) {
+      message.error(error?.message || "Có lỗi xảy ra");
+    }
+  };
+
   return (
     <div className="my-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
       {/* Left: Gallery */}
@@ -114,6 +155,13 @@ const Product = () => {
           Đã bán {product.productCountSell || 0} • Lượt xem{" "}
           {product.productClickView || 0}
         </div>
+
+        {/* Rating display */}
+        <div className="flex items-center gap-2">
+          <Rate disabled value={4.5} style={{ fontSize: 16 }} />
+          <span className="text-sm text-gray-600">(4.5) • 12 đánh giá</span>
+        </div>
+
         <div className="text-2xl text-red-600 font-semibold">
           ₫{product.productPrice?.toLocaleString("vi-VN")}
         </div>
@@ -173,8 +221,51 @@ const Product = () => {
           >
             Mua ngay
           </button>
+          <button
+            className={`px-6 py-3 rounded border transition-colors ${
+              favoriteStatus[productId]
+                ? "bg-red-500 text-white border-red-500 hover:bg-red-600"
+                : "border-gray-300 text-gray-700 hover:border-red-500 hover:text-red-500"
+            }`}
+            onClick={handleToggleFavorite}
+            title={
+              favoriteStatus[productId]
+                ? "Xóa khỏi yêu thích"
+                : "Thêm vào yêu thích"
+            }
+          >
+            {favoriteStatus[productId] ? (
+              <HeartFilled className="text-lg" />
+            ) : (
+              <HeartOutlined className="text-lg" />
+            )}
+          </button>
+          {isAuthenticated && (
+            <button
+              className="border border-gray-300 px-6 py-3 rounded hover:border-gray-400"
+              onClick={() => setShowReviewForm(true)}
+            >
+              Đánh giá
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Reviews Section */}
+      <div className="col-span-full mt-12">
+        <ReviewList productId={productId} />
+      </div>
+
+      {/* Review Form Modal */}
+      <ReviewForm
+        visible={showReviewForm}
+        onCancel={() => setShowReviewForm(false)}
+        productId={productId}
+        onSuccess={() => {
+          // Refresh reviews after successful submission
+          window.location.reload();
+        }}
+      />
     </div>
   );
 };

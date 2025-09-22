@@ -7,15 +7,16 @@ import { getHomepageProductApi } from "../services/api";
 const BestSeller = () => {
   const [newestProducts, setNewestProducts] = useState([]);
 
+
   useEffect(() => {
     const fetchNewestProducts = async () => {
       const response = await getHomepageProductApi();
       setNewestProducts(response.data.newestProducts);
       console.log("check response", response);
-    };
+    }
     fetchNewestProducts();
     console.log(newestProducts);
-  }, []);
+  },[])
 
   return (
     <div className="my-10">
