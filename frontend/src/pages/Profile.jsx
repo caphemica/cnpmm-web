@@ -1,11 +1,19 @@
 import React, { useState, useEffect } from "react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
+import { fetchMyPromotionScore } from "@/store/slices/promotionScoreSlice";
 
 const Profile = () => {
+  const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
+  const { totalPromotionScore, loading } = useSelector((s) => s.promotionScore);
 
   const handleEdit = () => {};
+  useEffect(() => {
+    if (user) {
+      dispatch(fetchMyPromotionScore());
+    }
+  }, [dispatch, user]);
   return (
     <div>
       <form
@@ -39,34 +47,53 @@ const Profile = () => {
               readOnly={true} // Email field is always read-only
             />
           </div>
+
+          <div className="flex items-center justify-between bg-gray-50 border border-gray-200 px-3 py-2">
+            <span className="text-sm text-gray-600">Điểm khuyến mãi</span>
+            <span className="text-base font-semibold">
+              {loading
+                ? "..."
+                : Number(totalPromotionScore || 0).toLocaleString()}{" "}
+              điểm
+            </span>
+          </div>
         </div>
 
-        <div className="w-full flex justify-between gap-4 mt-4">
-          {handleEdit ? (
-            <>
+        <div className="w-full flex flex-col gap-3 mt-4">
+          <Link
+            to="/my-favorites"
+            className="w-full bg-blue-500 text-white font-light px-8 py-2 text-center hover:bg-blue-600 transition-colors"
+          >
+            My Favorites
+          </Link>
+
+          <div className="flex justify-between gap-4">
+            {handleEdit ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => handleEdit}
+                  className="w-1/2 bg-gray-400 text-white font-light px-4 py-2"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="w-1/2 bg-black text-white font-light px-4 py-2"
+                >
+                  Save
+                </button>
+              </>
+            ) : (
               <button
                 type="button"
                 onClick={() => handleEdit}
-                className="w-1/2 bg-gray-400 text-white font-light px-4 py-2"
+                className="w-full bg-black text-white font-light px-8 py-2"
               >
-                Cancel
+                Edit Profile
               </button>
-              <button
-                type="submit"
-                className="w-1/2 bg-black text-white font-light px-4 py-2"
-              >
-                Save
-              </button>
-            </>
-          ) : (
-            <button
-              type="button"
-              onClick={() => handleEdit}
-              className="w-full bg-black text-white font-light px-8 py-2"
-            >
-              Edit Profile
-            </button>
-          )}
+            )}
+          </div>
         </div>
       </form>
     </div>

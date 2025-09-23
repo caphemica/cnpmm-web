@@ -77,3 +77,78 @@ export const requestCancelOrderApi = (orderId) => {
   const urlBackend = `/api/v1/order/${orderId}/cancel-request`;
   return axios.patch(urlBackend);
 };
+
+// Promotion Score
+export const getMyPromotionScoreApi = () => {
+  const urlBackend = "/api/v1/promotionScore";
+  return axios.get(urlBackend);
+};
+
+// Coupons
+export const getMyCouponsApi = () => {
+  const urlBackend = "/api/v1/coupon";
+  return axios.get(urlBackend);
+};
+
+export const redeemCouponByPointsApi = (payload) => {
+  const urlBackend = "/api/v1/coupon/redeem";
+  return axios.post(urlBackend, payload);
+};
+
+export const validateCouponApi = (code, subtotal) => {
+  const urlBackend = "/api/v1/coupon/validate";
+  return axios.post(urlBackend, { code, subtotal });
+};
+
+// Coupon templates (for redeem by points)
+export const getCouponTemplatesApi = () => {
+  const urlBackend = "/api/v1/coupon/templates";
+  return axios.get(urlBackend);
+};
+
+export const redeemCouponFromTemplateApi = (templateId) => {
+  const urlBackend = "/api/v1/coupon/redeem-template";
+  return axios.post(urlBackend, { templateId });
+};
+
+// Reviews
+export const getProductReviewsApi = (productId, query) => {
+  const urlBackend = `/api/v1/review/product/${productId}`;
+  return axios.get(urlBackend, { params: query });
+};
+
+export const createReviewApi = (payload) => {
+  const urlBackend = "/api/v1/review";
+  return axios.post(urlBackend, payload);
+};
+
+export const getMyReviewsApi = (query) => {
+  const urlBackend = "/api/v1/review/my-reviews";
+  return axios.get(urlBackend, { params: query });
+};
+
+export const getEligibleOrdersForReviewApi = (productId) => {
+  const urlBackend = `/api/v1/review/eligible-orders/${productId}`;
+  return axios.get(urlBackend);
+};
+
+// Favorites
+export const addToFavoritesApi = (productId) => {
+  const urlBackend = "/api/v1/favorite";
+  return axios.post(urlBackend, { productId });
+};
+
+export const removeFromFavoritesApi = (productId) => {
+  const urlBackend = `/api/v1/favorite/${productId}`;
+  return axios.delete(urlBackend);
+};
+
+export const getMyFavoritesApi = (query) => {
+  const urlBackend = "/api/v1/favorite";
+  return axios.get(urlBackend, { params: query });
+};
+
+export const checkFavoriteApi = (productId) => {
+  const urlBackend = `/api/v1/favorite/check/${productId}`;
+  return axios.get(urlBackend);
+};
