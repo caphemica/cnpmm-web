@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import Home from "./pages/Home";
 import Collection from "./pages/Collection";
 import About from "./pages/About";
@@ -19,9 +19,15 @@ import { Toaster } from "sonner";
 import VerifyAccount from "./pages/VerifyAccount";
 import { useDispatch } from "react-redux";
 import { fetchMe } from "./store/slices/authSlice";
+import AdminLayout from "./pages/admin/AdminLayout";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminProducts from "./pages/admin/AdminProducts";
+import AdminOrders from "./pages/admin/AdminOrders";
 
 const App = () => {
   const dispatch = useDispatch();
+  const location = useLocation();
+  const isAdminPath = location.pathname.startsWith("/admin");
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
@@ -30,7 +36,7 @@ const App = () => {
 
   return (
     <div className="px-4 sm:px-[5vw] md:px-[7vw] lg:px-[9vw]">
-      <Navbar />
+      {!isAdminPath && <Navbar />}
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/collection" element={<Collection />} />
@@ -44,10 +50,15 @@ const App = () => {
         <Route path="/place-order" element={<PlaceOrder />} />
         <Route path="/orders" element={<Orders />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<AdminDashboard />} />
+          <Route path="products" element={<AdminProducts />} />
+          <Route path="orders" element={<AdminOrders />} />
+        </Route>
         <Route path="/my-favorites" element={<MyFavorites />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
       </Routes>
-      <Footer />
+      {!isAdminPath && <Footer />}
       <Toaster position="top-right" richColors closeButton duration={4000} />
     </div>
   );

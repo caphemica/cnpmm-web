@@ -11,7 +11,10 @@ const ProductItem = ({ id, image, name, price }) => {
       <div className="overflow-hidden">
         <img
           className="hover:scale-110 transition ease-in-out"
-          src={image[0]}
+          src={
+            image[0] ||
+            "https://res.cloudinary.com/dbxotojek/image/upload/v1756965889/p_img2_l8dl3c.png"
+          }
           alt=""
         />
       </div>

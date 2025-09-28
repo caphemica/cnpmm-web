@@ -131,7 +131,14 @@ const Product = () => {
                 activeImageIdx === idx ? "border-black" : "border-transparent"
               } rounded overflow-hidden`}
             >
-              <img src={img} alt="thumb" className="w-full object-cover" />
+              <img
+                src={
+                  img ||
+                  "https://res.cloudinary.com/dbxotojek/image/upload/v1756965889/p_img2_l8dl3c.png"
+                }
+                alt="thumb"
+                className="w-full object-cover"
+              />
             </button>
           ))}
         </div>

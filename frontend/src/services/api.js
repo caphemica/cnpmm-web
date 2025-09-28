@@ -20,6 +20,11 @@ export const getHomepageProductApi = () => {
   return axios.get(urlBackend);
 };
 
+export const adminCreateProductApi = (payload) => {
+  const urlBackend = "/api/v1/product";
+  return axios.post(urlBackend, payload);
+};
+
 export const getProductByIdApi = (id) => {
   const urlBackend = `/api/v1/product/${id}`;
   return axios.get(urlBackend);
@@ -70,6 +75,16 @@ export const createOrderApi = (payload) => {
 
 export const getMyOrdersApi = () => {
   const urlBackend = "/api/v1/order";
+  return axios.get(urlBackend);
+};
+
+export const adminListOrdersApi = (query) => {
+  const urlBackend = "/api/v1/order/admin";
+  return axios.get(urlBackend, { params: query });
+};
+
+export const adminOrderStatsApi = () => {
+  const urlBackend = "/api/v1/order/admin/stats";
   return axios.get(urlBackend);
 };
 
