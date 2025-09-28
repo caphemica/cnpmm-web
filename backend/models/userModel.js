@@ -1,9 +1,9 @@
 import { Sequelize, DataTypes } from "sequelize";
 
 // Tạo kết nối đến database MySQL
-const sequelize = new Sequelize('uteshop', 'root', '123456', {
-  host: 'localhost',
-  dialect: 'mysql'
+const sequelize = new Sequelize("uteshop", "root", "123456", {
+  host: "localhost",
+  dialect: "mysql",
 });
 
 const userModel = sequelize.define(
@@ -38,6 +38,11 @@ const userModel = sequelize.define(
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
+    role: {
+      type: DataTypes.ENUM("USER", "ADMIN"),
+      allowNull: false,
+      defaultValue: "USER",
+    },
   },
   {
     // Tên bảng trong database sẽ là 'user'
@@ -46,12 +51,13 @@ const userModel = sequelize.define(
 );
 
 // Đồng bộ model với database (tạo bảng nếu chưa tồn tại)
-sequelize.sync()
+sequelize
+  .sync()
   .then(() => {
-    console.log('User table has been created successfully!');
+    console.log("User table has been created successfully!");
   })
   .catch((error) => {
-    console.error('Unable to create table:', error);
+    console.error("Unable to create table:", error);
   });
 
 export default userModel;

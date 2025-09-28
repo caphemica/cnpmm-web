@@ -41,6 +41,7 @@ const loginUser = async (req, res) => {
           id: user.id,
           name: user.name,
           email: user.email,
+          role: user.role,
         },
       });
     } else {
@@ -345,6 +346,7 @@ const getMe = async (req, res) => {
         name: user.name,
         email: user.email,
         isVerified: user.isVerified,
+        role: user.role,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       },

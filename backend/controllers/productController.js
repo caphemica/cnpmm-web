@@ -1,4 +1,5 @@
 import productModel from "../models/productModel.js";
+import { getIO } from "../services/socket.js";
 import { Op } from "sequelize";
 
 const getHomepageData = async (req, res) => {
@@ -124,3 +125,51 @@ const getAllProduct = async (req, res) => {
 };
 
 export { getHomepageData, getProductById, getAllProduct };
+
+// Admin create product
+export const createProduct = async (req, res) => {
+  try {
+    const {
+      productName,
+      productDescription,
+      productPrice,
+      productQuantity,
+      productImage,
+      productPromotion,
+    } = req.body || {};
+    if (!productName || !productDescription) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Thiếu tên/mô tả" });
+    }
+    const doc = await productModel.create({
+      productName,
+      productDescription,
+      productPrice: Number(productPrice || 0),
+      productQuantity: Number(productQuantity || 0),
+      productImage: Array.isArray(productImage) ? productImage : [],
+      productCountSell: 0,
+      productClickView: 0,
+      productPromotion: Number(productPromotion || 0),
+    });
+
+    // Emit socket notification to all clients
+    const io = getIO();
+    io &&
+      io.emit("notification:new_product", {
+        title: "Sản phẩm mới",
+        message: `Đã có sản phẩm mới: ${doc.productName}`,
+        productId: doc.id,
+        createdAt: new Date().toISOString(),
+      });
+
+    return res.json({
+      success: true,
+      data: doc,
+      message: "Tạo sản phẩm thành công",
+    });
+  } catch (e) {
+    console.log(e);
+    return res.status(500).json({ success: false, message: e.message });
+  }
+};

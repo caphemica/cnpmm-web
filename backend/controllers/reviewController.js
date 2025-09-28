@@ -2,6 +2,8 @@ import reviewModel from "../models/reviewModel.js";
 import orderModel from "../models/orderModel.js";
 import productModel from "../models/productModel.js";
 import promotionScoreModel from "../models/promotionScore.js";
+import userModel from "../models/userModel.js";
+import { getIO } from "../services/socket.js";
 
 // GET /api/v1/review/product/:productId - Lấy danh sách đánh giá của sản phẩm
 export const getProductReviews = async (req, res) => {
@@ -176,6 +178,42 @@ export const createReview = async (req, res) => {
         promotionScoreUserId: userId,
         totalPromotionScore: pointsToAdd,
       });
+    }
+
+    // Lấy thông tin user và product để gửi thông báo
+    const user = await userModel.findByPk(userId, {
+      attributes: ["id", "name", "email"],
+    });
+
+    const product = await productModel.findByPk(productId, {
+      attributes: ["id", "productName", "productImage"],
+    });
+
+    // Emit socket event để thông báo cho admin
+    const io = getIO();
+    if (io) {
+      const notificationData = {
+        type: "NEW_REVIEW",
+        review: {
+          id: review.id,
+          rating: review.rating,
+          comment: review.comment,
+          createdAt: review.createdAt,
+        },
+        user: {
+          id: user.id,
+          userName: user.name,
+          userEmail: user.email,
+        },
+        product: {
+          id: product.id,
+          productName: product.productName,
+          productImage: product.productImage,
+        },
+        message: `Có đánh giá mới từ ${user.name} cho sản phẩm "${product.productName}"`,
+      };
+
+      io.to("admin").emit("new_review_notification", notificationData);
     }
 
     return res.json({

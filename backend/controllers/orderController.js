@@ -2,6 +2,8 @@ import orderModel from "../models/orderModel.js";
 import productModel from "../models/productModel.js";
 import cartModel from "../models/cartModel.js";
 import promotionScoreModel from "../models/promotionScore.js";
+import { getIO } from "../services/socket.js";
+import couponModel from "../models/couponModel.js";
 
 // GET /api/v1/order - Lấy danh sách đơn hàng của user
 export const getMyOrders = async (req, res) => {
@@ -28,11 +30,12 @@ export const getMyOrders = async (req, res) => {
 export const createOrder = async (req, res) => {
   try {
     const userId = req.user?.id;
+
     if (!userId) {
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
-    const { items, shippingAddress, redeemScore } = req.body || {};
+    const { items, shippingAddress, redeemScore, couponCode } = req.body || {};
     if (!Array.isArray(items) || items.length === 0) {
       return res
         .status(400)
@@ -102,7 +105,48 @@ export const createOrder = async (req, res) => {
       availablePoints,
       maxRedeemBySubtotal
     );
-    const discount = actualRedeem * pointValue;
+    let discount = actualRedeem * pointValue;
+
+    // Áp dụng phiếu giảm giá nếu có
+    let appliedCoupon = null;
+    if (couponCode) {
+      const coupon = await couponModel.findOne({ where: { code: couponCode } });
+      if (!coupon || coupon.ownerUserId !== userId) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Phiếu giảm giá không hợp lệ" });
+      }
+      if (coupon.usesRemaining <= 0) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Phiếu đã sử dụng" });
+      }
+      if (coupon.expiresAt && new Date(coupon.expiresAt) < new Date()) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Phiếu đã hết hạn" });
+      }
+      if (totalOrderPrice < Number(coupon.minOrder || 0)) {
+        return res.status(400).json({
+          success: false,
+          message: "Chưa đạt giá trị tối thiểu để áp dụng phiếu",
+        });
+      }
+
+      let couponDiscount = 0;
+      if (coupon.type === "FIXED") {
+        couponDiscount = Number(coupon.value || 0);
+      } else {
+        couponDiscount = Math.floor(
+          (totalOrderPrice * Number(coupon.value || 0)) / 100
+        );
+        const cap = Number(coupon.maxDiscount || 0);
+        if (cap > 0) couponDiscount = Math.min(couponDiscount, cap);
+      }
+      couponDiscount = Math.max(0, Math.min(couponDiscount, totalOrderPrice));
+      discount += couponDiscount;
+      appliedCoupon = coupon;
+    }
 
     const order = await orderModel.create({
       orderUserId: userId,
@@ -134,11 +178,37 @@ export const createOrder = async (req, res) => {
           ),
         });
       }
+
+      // Nếu có coupon, trừ lượt sử dụng
+      if (appliedCoupon) {
+        await appliedCoupon.update({
+          usesRemaining: Math.max(
+            0,
+            Number(appliedCoupon.usesRemaining || 0) - 1
+          ),
+        });
+      }
+
+      // Emit socket notification: new order created
+      const io = getIO();
+      io &&
+        io.emit("notification:new_order", {
+          title: "Đơn hàng mới",
+          message: `User #${userId} vừa đặt đơn #${order.id}`,
+          orderId: order.id,
+          total: Math.max(0, totalOrderPrice - discount),
+          createdAt: new Date().toISOString(),
+        });
     }
 
     return res.json({
       success: true,
-      data: { ...order.toJSON(), discount, usedPromotionScore: actualRedeem },
+      data: {
+        ...order.toJSON(),
+        discount,
+        usedPromotionScore: actualRedeem,
+        usedCouponCode: appliedCoupon ? appliedCoupon.code : null,
+      },
       message: "Tạo đơn hàng thành công",
     });
   } catch (e) {
@@ -222,6 +292,112 @@ export const updateOrderStatus = async (req, res) => {
       success: true,
       message: "Cập nhật trạng thái thành công",
       data: order,
+    });
+  } catch (e) {
+    console.log(e);
+    return res.status(500).json({ success: false, message: e.message });
+  }
+};
+
+// Admin: GET /api/v1/order/admin - list all orders
+export const adminListOrders = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const total = await orderModel.count();
+    const orders = await orderModel.findAll({
+      order: [["createdAt", "DESC"]],
+      limit,
+      offset,
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        orders,
+        pagination: {
+          currentPage: page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      },
+    });
+  } catch (e) {
+    console.log(e);
+    return res.status(500).json({ success: false, message: e.message });
+  }
+};
+
+// GET /api/v1/order/admin/stats - KPIs and chart data
+export const adminOrderStats = async (req, res) => {
+  try {
+    // Successful orders for revenue stats
+    const all = await orderModel.findAll({ order: [["createdAt", "DESC"]] });
+    const completed = all.filter(
+      (o) => (o.status || "").toUpperCase() === "COMPLETED"
+    );
+
+    const totalRevenue = completed.reduce(
+      (s, o) => s + Number(o.totalOrderPrice || 0),
+      0
+    );
+    const totalOrders = all.length;
+    const completedOrders = completed.length;
+    const shippingOrders = all.filter(
+      (o) => (o.status || "").toUpperCase() === "SHIPPING"
+    ).length;
+    const newOrders = all.filter(
+      (o) => (o.status || "").toUpperCase() === "NEW"
+    ).length;
+
+    // Group by day revenue (last 14 days)
+    const days = {};
+    for (const o of completed) {
+      const d = new Date(o.createdAt);
+      const key = `${d.getFullYear()}-${(d.getMonth() + 1)
+        .toString()
+        .padStart(2, "0")}-${d.getDate().toString().padStart(2, "0")}`;
+      days[key] = (days[key] || 0) + Number(o.totalOrderPrice || 0);
+    }
+    const last14 = [];
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 86400000);
+      const key = `${d.getFullYear()}-${(d.getMonth() + 1)
+        .toString()
+        .padStart(2, "0")}-${d.getDate().toString().padStart(2, "0")}`;
+      last14.push({ date: key, revenue: days[key] || 0 });
+    }
+
+    // Top 10 products by quantity from order snapshots
+    const productQty = {};
+    for (const o of all) {
+      const items = Array.isArray(o.items) ? o.items : [];
+      for (const it of items) {
+        const name = it?.name || `#${it?.productId}`;
+        productQty[name] = (productQty[name] || 0) + Number(it?.quantity || 0);
+      }
+    }
+    const topProducts = Object.entries(productQty)
+      .map(([name, qty]) => ({ name, qty }))
+      .sort((a, b) => b.qty - a.qty)
+      .slice(0, 10);
+
+    return res.json({
+      success: true,
+      data: {
+        kpis: {
+          totalRevenue,
+          totalOrders,
+          completedOrders,
+          shippingOrders,
+          newOrders,
+        },
+        revenueByDay: last14,
+        topProducts,
+      },
     });
   } catch (e) {
     console.log(e);
