@@ -1,7 +1,7 @@
 import { Sequelize, DataTypes } from "sequelize";
 
 // Tạo kết nối đến database MySQL
-const sequelize = new Sequelize("uteshop", "root", "123456", {
+const sequelize = new Sequelize("uteshop", "root", "nodeSQL", {
   host: "localhost",
   dialect: "mysql",
 });

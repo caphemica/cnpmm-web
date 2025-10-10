@@ -1,5 +1,5 @@
 import { Sequelize, DataTypes } from "sequelize";
-const sequelize = new Sequelize("uteshop", "root", "123456", {
+const sequelize = new Sequelize("uteshop", "root", "nodeSQL", {
   host: "localhost",
   dialect: "mysql",
 });
