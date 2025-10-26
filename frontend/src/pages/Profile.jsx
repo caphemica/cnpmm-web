@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Link } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { fetchMyPromotionScore } from "@/store/slices/promotionScoreSlice";
 
 const Profile = () => {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
   const { totalPromotionScore, loading } = useSelector((s) => s.promotionScore);
+  const navigate = useNavigate();
 
-  const handleEdit = () => {};
+  const handleEdit = () => {
+    navigate("/");
+  };
   useEffect(() => {
     if (user) {
       dispatch(fetchMyPromotionScore());
@@ -72,8 +75,8 @@ const Profile = () => {
               <>
                 <button
                   type="button"
-                  onClick={() => handleEdit}
-                  className="w-1/2 bg-gray-400 text-white font-light px-4 py-2"
+                  onClick={() => navigate("/")}
+                  className="w-1/2 bg-gray-400 text-white font-light px-4 py-2 cursor-pointer"
                 >
                   Cancel
                 </button>

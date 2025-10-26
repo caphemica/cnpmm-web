@@ -24,6 +24,8 @@ const MyFavorites = () => {
     dispatch(fetchMyFavorites({ page: currentPage, limit: 12 }));
   }, [dispatch, isAuthenticated, navigate, currentPage]);
 
+  console.log(favorites);
+
   const handlePageChange = (page) => {
     setCurrentPage(page);
   };
@@ -107,7 +109,10 @@ const MyFavorites = () => {
                   <div className="relative">
                     <Link to={`/product/${product.id}`}>
                       <img
-                        src={image}
+                        src={
+                          product.productImage[0] ||
+                          "https://res.cloudinary.com/dbxotojek/image/upload/v1756965917/p_img10_hjfeea.png"
+                        }
                         alt={product.productName}
                         className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
                       />
